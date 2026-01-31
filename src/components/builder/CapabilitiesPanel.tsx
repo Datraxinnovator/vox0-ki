@@ -1,13 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AgentConfig, useAgentStore } from '@/lib/store';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Search, CloudSun, Database, Code, Globe, Zap, GripVertical, Plus } from 'lucide-react';
-import { chatService } from '@/lib/chat';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { toast } from 'sonner';
+import { Search, CloudSun, Database, Code, Globe } from 'lucide-react';
 interface ToolDef {
   id: string;
   name: string;
@@ -15,148 +10,67 @@ interface ToolDef {
   icon: React.ReactNode;
 }
 const AVAILABLE_TOOLS: ToolDef[] = [
-  { id: 'web_search', name: 'Web Oracle', description: 'Advanced real-time web intelligence', icon: <Search className="w-4 h-4" /> },
-  { id: 'get_weather', name: 'Meteo Stream', description: 'Precise global climate analytics', icon: <CloudSun className="w-4 h-4" /> },
-  { id: 'd1_db', name: 'D1 Matrix', description: 'Hyper-fast SQL storage at the edge', icon: <Database className="w-4 h-4" /> },
-  { id: 'mcp_server', name: 'MCP Bridge', description: 'Seamless external protocol integration', icon: <Globe className="w-4 h-4" /> },
+  { id: 'web_search', name: 'Web Search', description: 'Real-time browsing via SerpAPI', icon: <Search className="w-4 h-4" /> },
+  { id: 'get_weather', name: 'Weather Service', description: 'Global forecasts and current conditions', icon: <CloudSun className="w-4 h-4" /> },
+  { id: 'd1_db', name: 'D1 Database', description: 'Persistent SQL storage at the edge', icon: <Database className="w-4 h-4" /> },
+  { id: 'mcp_server', name: 'MCP Integration', description: 'Connect external Model Context tools', icon: <Globe className="w-4 h-4" /> },
 ];
-function SortableToolItem({ tool, isEnabled, onToggle }: { tool: ToolDef, isEnabled: boolean, onToggle: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: tool.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
-    zIndex: transform ? 50 : 'auto'
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative p-5 rounded-2xl border transition-all duration-500 overflow-hidden ${
-        isEnabled
-          ? 'bg-primary/10 border-primary/40 shadow-glow'
-          : 'bg-zinc-950 border-white/5 opacity-50'
-      }`}
-    >
-      {isEnabled && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-shimmer" />
-        </div>
-      )}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-primary transition-colors p-1">
-            <GripVertical className="w-4 h-4" />
-          </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
-            isEnabled ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_10px_rgba(255,215,0,0.2)]' : 'bg-zinc-900 text-zinc-600 border-zinc-800'
-          }`}>
-            {tool.icon}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <Label htmlFor={tool.id} className="font-bold text-white block truncate cursor-pointer">{tool.name}</Label>
-              {isEnabled && (
-                <span className="flex items-center gap-1 text-[8px] font-black bg-primary text-black px-1.5 py-0.5 rounded-sm animate-pulse shadow-[0_0_8px_rgba(255,215,0,0.6)]">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-tighter font-bold">{tool.description}</p>
-          </div>
-        </div>
-        <Switch
-          id={tool.id}
-          checked={isEnabled}
-          onCheckedChange={onToggle}
-          className="data-[state=checked]:bg-primary"
-        />
-      </div>
-    </div>
-  );
+interface CapabilitiesPanelProps {
+  agent: AgentConfig;
 }
-export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
+export function CapabilitiesPanel({ agent }: CapabilitiesPanelProps) {
   const updateAgent = useAgentStore((s) => s.updateAgent);
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 8 }
-  });
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-  const sensors = useSensors(pointerSensor, keyboardSensor);
-  useEffect(() => {
-    if (agent?.tools) {
-      chatService.updateTools(agent.tools);
-    }
-  }, [agent?.tools]);
-  if (!agent) return null;
   const toggleTool = (toolId: string) => {
-    const current = [...(agent.tools || [])];
-    const index = current.indexOf(toolId);
-    const toolName = AVAILABLE_TOOLS.find(t => t.id === toolId)?.name || toolId;
+    const currentTools = [...agent.tools];
+    const index = currentTools.indexOf(toolId);
     if (index > -1) {
-      current.splice(index, 1);
-      toast.info(`${toolName} protocol decommissioned.`);
+      currentTools.splice(index, 1);
     } else {
-      current.push(toolId);
-      toast.success(`${toolName} protocol initialized successfully.`);
+      currentTools.push(toolId);
     }
-    updateAgent(agent.id, { tools: current });
+    updateAgent(agent.id, { tools: currentTools });
   };
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = agent.tools.indexOf(active.id as string);
-      const newIndex = agent.tools.indexOf(over.id as string);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        updateAgent(agent.id, { tools: arrayMove(agent.tools, oldIndex, newIndex) });
-        toast.info('Intelligence stack re-prioritized.');
-      }
-    }
-  };
-  const sortedTools = [...AVAILABLE_TOOLS].sort((a, b) => {
-    const idxA = (agent.tools || []).indexOf(a.id);
-    const idxB = (agent.tools || []).indexOf(b.id);
-    if (idxA === -1 && idxB === -1) return 0;
-    if (idxA === -1) return 1;
-    if (idxB === -1) return -1;
-    return idxA - idxB;
-  });
   return (
-    <div className="p-8 space-y-10">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em]">
-            <Zap className="w-3 h-3" /> Priority Stack
-          </div>
-          <span className="text-[10px] font-bold text-zinc-500">
-            {(agent.tools || []).length}/{AVAILABLE_TOOLS.length} ENABLED
-          </span>
-        </div>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={sortedTools.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {sortedTools.map((tool) => (
-                <SortableToolItem
-                  key={tool.id}
-                  tool={tool}
-                  isEnabled={(agent.tools || []).includes(tool.id)}
-                  onToggle={() => toggleTool(tool.id)}
+    <div className="p-6 space-y-8">
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Core Tools</h3>
+        <div className="space-y-3">
+          {AVAILABLE_TOOLS.map((tool) => (
+            <div 
+              key={tool.id} 
+              className={`p-4 rounded-xl border transition-all ${
+                agent.tools.includes(tool.id) 
+                  ? 'bg-primary/5 border-primary/30 shadow-sm' 
+                  : 'bg-card/50 border-white/5 opacity-70 grayscale-[0.5]'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    agent.tools.includes(tool.id) ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'
+                  }`}>
+                    {tool.icon}
+                  </div>
+                  <div>
+                    <Label htmlFor={tool.id} className="font-semibold cursor-pointer">{tool.name}</Label>
+                    <p className="text-2xs text-muted-foreground">{tool.description}</p>
+                  </div>
+                </div>
+                <Switch 
+                  id={tool.id} 
+                  checked={agent.tools.includes(tool.id)} 
+                  onCheckedChange={() => toggleTool(tool.id)}
                 />
-              ))}
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
-      </div>
-      <div className="pt-6 border-t border-primary/10">
-        <div className="flex items-center gap-2 text-zinc-600 font-black text-[10px] uppercase tracking-[0.3em] mb-6">
-          <Code className="w-3 h-3" /> Custom Protocols
+          ))}
         </div>
-        <div className="p-8 rounded-3xl border border-dashed border-primary/10 bg-zinc-950/40 text-center group cursor-not-allowed transition-colors hover:bg-primary/5">
-          <div className="w-12 h-12 rounded-full bg-zinc-900 flex items-center justify-center mx-auto mb-4 text-zinc-700">
-            <Plus className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Enterprise API Connector</p>
-          <p className="text-[9px] text-zinc-700 mt-2">COMING SOON</p>
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Custom Integrations</h3>
+        <div className="p-4 rounded-xl border border-dashed border-white/10 bg-white/2 text-center">
+          <Code className="w-6 h-6 mx-auto mb-2 text-muted-foreground/50" />
+          <p className="text-xs text-muted-foreground">Advanced API integrations coming soon</p>
         </div>
       </div>
     </div>
