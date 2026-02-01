@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { BookOpen, Code, Zap, Globe, Shield, Terminal } from 'lucide-react';
 export function ManualPage() {
   return (
