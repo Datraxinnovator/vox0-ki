@@ -22,8 +22,8 @@ const AVAILABLE_TOOLS: ToolDef[] = [
 ];
 function SortableToolItem({ tool, isEnabled, onToggle }: { tool: ToolDef, isEnabled: boolean, onToggle: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: tool.id });
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
+  const style = {
+    transform: CSS.Transform.toString(transform),
     transition,
     zIndex: transform ? 50 : 'auto'
   };
@@ -75,16 +75,23 @@ function SortableToolItem({ tool, isEnabled, onToggle }: { tool: ToolDef, isEnab
   );
 }
 export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
+  // Correctly handle store calls to prevent re-render loops and selector errors
   const updateAgent = useAgentStore((s) => s.updateAgent);
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Initialize sensors separately to stabilize hook calls
+  const pointerSensor = useSensor(PointerSensor);
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  const sensors = useSensors(pointerSensor, keyboardSensor);
+  // Synchronize tools with chat service
   useEffect(() => {
-    chatService.updateTools(agent.tools);
-  }, [agent.tools]);
+    if (agent?.tools) {
+      chatService.updateTools(agent.tools);
+    }
+  }, [agent?.tools]);
+  if (!agent) return null;
   const toggleTool = (toolId: string) => {
-    const current = [...agent.tools];
+    const current = [...(agent.tools || [])];
     const index = current.indexOf(toolId);
     const toolName = AVAILABLE_TOOLS.find(t => t.id === toolId)?.name || toolId;
     if (index > -1) {
@@ -108,8 +115,8 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
     }
   };
   const sortedTools = [...AVAILABLE_TOOLS].sort((a, b) => {
-    const idxA = agent.tools.indexOf(a.id);
-    const idxB = agent.tools.indexOf(b.id);
+    const idxA = (agent.tools || []).indexOf(a.id);
+    const idxB = (agent.tools || []).indexOf(b.id);
     if (idxA === -1 && idxB === -1) return 0;
     if (idxA === -1) return 1;
     if (idxB === -1) return -1;
@@ -122,7 +129,9 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
           <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em]">
             <Zap className="w-3 h-3" /> Priority Stack
           </div>
-          <span className="text-[10px] font-bold text-zinc-500">{agent.tools.length}/{AVAILABLE_TOOLS.length} ENABLED</span>
+          <span className="text-[10px] font-bold text-zinc-500">
+            {(agent.tools || []).length}/{AVAILABLE_TOOLS.length} ENABLED
+          </span>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortedTools.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -131,7 +140,7 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
                 <SortableToolItem
                   key={tool.id}
                   tool={tool}
-                  isEnabled={agent.tools.includes(tool.id)}
+                  isEnabled={(agent.tools || []).includes(tool.id)}
                   onToggle={() => toggleTool(tool.id)}
                 />
               ))}
