@@ -7,6 +7,7 @@ import { chatService } from '@/lib/chat';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { toast } from 'sonner';
 interface ToolDef {
   id: string;
   name: string;
@@ -21,29 +22,45 @@ const AVAILABLE_TOOLS: ToolDef[] = [
 ];
 function SortableToolItem({ tool, isEnabled, onToggle }: { tool: ToolDef, isEnabled: boolean, onToggle: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: tool.id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition,
+    zIndex: transform ? 50 : 'auto'
+  };
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`p-5 rounded-2xl border transition-all duration-300 ${
+      className={`relative p-5 rounded-2xl border transition-all duration-500 overflow-hidden ${
         isEnabled
-          ? 'bg-primary/10 border-primary/40 shadow-[0_0_15px_rgba(255,215,0,0.1)]'
-          : 'bg-zinc-950 border-primary/5 opacity-50'
+          ? 'bg-primary/10 border-primary/40 shadow-glow'
+          : 'bg-zinc-950 border-white/5 opacity-50'
       }`}
     >
+      {isEnabled && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-shimmer" />
+        </div>
+      )}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-primary transition-colors">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-primary transition-colors p-1">
             <GripVertical className="w-4 h-4" />
           </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
             isEnabled ? 'bg-primary/20 text-primary border-primary/40' : 'bg-zinc-900 text-zinc-600 border-zinc-800'
           }`}>
             {tool.icon}
           </div>
           <div className="flex-1">
-            <Label htmlFor={tool.id} className="font-bold text-white block truncate">{tool.name}</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor={tool.id} className="font-bold text-white block truncate cursor-pointer">{tool.name}</Label>
+              {isEnabled && (
+                <span className="flex items-center gap-1 text-[8px] font-black bg-primary text-black px-1.5 py-0.5 rounded-sm animate-pulse">
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-zinc-500 uppercase tracking-tighter font-bold">{tool.description}</p>
           </div>
         </div>
@@ -69,8 +86,14 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
   const toggleTool = (toolId: string) => {
     const current = [...agent.tools];
     const index = current.indexOf(toolId);
-    if (index > -1) current.splice(index, 1);
-    else current.push(toolId);
+    const toolName = AVAILABLE_TOOLS.find(t => t.id === toolId)?.name || toolId;
+    if (index > -1) {
+      current.splice(index, 1);
+      toast.info(`${toolName} protocol decommissioned.`);
+    } else {
+      current.push(toolId);
+      toast.success(`${toolName} protocol initialized successfully.`);
+    }
     updateAgent(agent.id, { tools: current });
   };
   const handleDragEnd = (event: any) => {
@@ -80,10 +103,10 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
       const newIndex = agent.tools.indexOf(over?.id as string);
       if (oldIndex !== -1 && newIndex !== -1) {
         updateAgent(agent.id, { tools: arrayMove(agent.tools, oldIndex, newIndex) });
+        toast.info('Intelligence stack re-prioritized.');
       }
     }
   };
-  // Re-sort AVAILABLE_TOOLS based on agent.tools order for visual consistency
   const sortedTools = [...AVAILABLE_TOOLS].sort((a, b) => {
     const idxA = agent.tools.indexOf(a.id);
     const idxB = agent.tools.indexOf(b.id);
@@ -95,8 +118,11 @@ export function CapabilitiesPanel({ agent }: { agent: AgentConfig }) {
   return (
     <div className="p-8 space-y-10">
       <div className="space-y-6">
-        <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em]">
-          <Zap className="w-3 h-3" /> Priority Stack
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em]">
+            <Zap className="w-3 h-3" /> Priority Stack
+          </div>
+          <span className="text-[10px] font-bold text-zinc-500">{agent.tools.length}/{AVAILABLE_TOOLS.length} ENABLED</span>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortedTools.map(t => t.id)} strategy={verticalListSortingStrategy}>

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Send, Bot, User, Loader2, Sparkles, Terminal } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, Terminal, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface ChatPreviewProps {
   agent: AgentConfig;
@@ -16,6 +16,7 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const toolCount = agent.tools.length;
   useEffect(() => {
     chatService.switchSession(agent.id);
     loadMessages();
@@ -54,13 +55,20 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
   };
   return (
     <div className="flex flex-col h-full overflow-hidden bg-black">
-      <div className="h-12 border-b border-primary/10 px-6 flex items-center justify-between bg-zinc-950/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
-          <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Vox0-ki Neural Stream v2.5</span>
+      <div className="h-14 border-b border-primary/10 px-6 flex items-center justify-between bg-zinc-950/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
+            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Vox0-ki Neural Stream</span>
+          </div>
+          <div className="h-4 w-[1px] bg-white/10" />
+          <Badge className="bg-primary/5 border-primary/20 text-primary hover:bg-primary/10 transition-colors font-mono text-[9px] px-3 flex items-center gap-1.5">
+            <Activity className="w-3 h-3" />
+            {toolCount}/4 PROTOCOLS ACTIVE
+          </Badge>
         </div>
         {agent.systemPrompt && (
-          <Badge variant="outline" className="text-[9px] border-primary/20 text-primary/60 font-mono">
+          <Badge variant="outline" className="text-[9px] border-primary/20 text-primary/60 font-mono hidden sm:flex">
             CUSTOM DIRECTIVES ACTIVE
           </Badge>
         )}
@@ -69,7 +77,7 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
         <div className="space-y-8 max-w-3xl mx-auto">
           {messages.length === 0 && !isTyping && (
             <div className="py-20 text-center space-y-6">
-              <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center mx-auto text-primary">
+              <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center mx-auto text-primary shadow-glow">
                 <Sparkles className="w-8 h-8" />
               </div>
               <div className="space-y-2">
@@ -82,8 +90,8 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
           )}
           {messages.map((m) => (
             <div key={m.id} className={cn("flex gap-4 items-start animate-fade-in", m.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border",
-                m.role === 'user' ? "bg-primary text-black border-primary/40" : "bg-zinc-900 text-primary border-white/5")}>
+              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all",
+                m.role === 'user' ? "bg-primary text-black border-primary/40 shadow-glow" : "bg-zinc-900 text-primary border-white/5")}>
                 {m.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
               </div>
               <div className="flex flex-col gap-2 max-w-[80%]">
@@ -96,8 +104,8 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
                 {m.toolCalls && m.toolCalls.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-1">
                     {m.toolCalls.map((tc) => (
-                      <div key={tc.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-primary/20 text-[10px] text-primary font-bold font-mono">
-                        <Terminal className="w-3 h-3" />
+                      <div key={tc.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-primary/20 text-[10px] text-primary font-bold font-mono group">
+                        <Terminal className="w-3 h-3 group-hover:animate-pulse" />
                         {renderToolCall(tc)}
                       </div>
                     ))}

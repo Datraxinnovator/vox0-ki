@@ -48,7 +48,7 @@ export const useAgentStore = create<AgentState>()(
           role: 'Intelligence Architect',
           systemPrompt: 'You are a Vox0-ki Intelligence Engine. Execute all directives with extreme precision and utilize premium protocols.',
           model: 'google-ai-studio/gemini-2.5-flash',
-          tools: ['web_search'],
+          tools: ['web_search', 'get_weather', 'd1_db', 'mcp_server'],
           lastEdited: Date.now(),
         }
       ],

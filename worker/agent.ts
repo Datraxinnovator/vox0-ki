@@ -12,7 +12,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
     isProcessing: false,
     model: 'google-ai-studio/gemini-2.5-flash',
     systemPrompt: 'You are a helpful AI assistant.',
-    enabledTools: []
+    enabledTools: ['web_search', 'get_weather', 'd1_db', 'mcp_server']
   };
   async onStart(): Promise<void> {
     this.chatHandler = new ChatHandler(
