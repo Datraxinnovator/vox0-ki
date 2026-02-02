@@ -8,13 +8,12 @@ import { Sparkles, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 export function AuthPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const login = useAuthStore((s) => s.login);
-  const navigate = useNavigate();
+const [password, setPassword] = useState('');
+const navigate = useNavigate();
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
-      login({ id: 'user-1', email, name: email.split('@')[0] });
+      useAuthStore.getState().login({ id: 'user-1', email, name: email.split('@')[0] });
       toast.success('Welcome to the elite workspace');
       navigate('/dashboard');
     } else {
