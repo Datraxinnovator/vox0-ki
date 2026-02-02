@@ -63,29 +63,33 @@ export class ChatHandler {
     const accumulatedToolCalls: any[] = [];
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta;
-      if (delta?.content) {
-        fullContent += delta.content;
-        onChunk(delta.content);
+      const content = delta?.content ?? '';
+      if (content) {
+        fullContent += content;
+        onChunk(content);
       }
-      if (delta?.tool_calls) {
-        for (const dtc of delta.tool_calls) {
-          const index = dtc.index;
-          if (!accumulatedToolCalls[index]) {
-            accumulatedToolCalls[index] = {
-              id: dtc.id || `tool_${Date.now()}_${index}`,
-              type: 'function',
-              function: { name: dtc.function?.name || '', arguments: dtc.function?.arguments || '' }
-            };
-          } else {
-            if (dtc.function?.name) accumulatedToolCalls[index].function.name = dtc.function.name;
-            if (dtc.function?.arguments) accumulatedToolCalls[index].function.arguments += dtc.function.arguments;
+      const toolCallsDelta = delta?.tool_calls;
+      if (toolCallsDelta && Array.isArray(toolCallsDelta)) {
+        for (const dtc of toolCallsDelta) {
+          if (dtc.index !== undefined && dtc.index >= 0) {
+            const index = dtc.index;
+            if (!accumulatedToolCalls[index]) {
+              accumulatedToolCalls[index] = {
+                id: dtc.id || `tool_${Date.now()}_${index}`,
+                type: 'function',
+                function: { name: dtc.function?.name || '', arguments: dtc.function?.arguments || '' }
+              };
+            } else {
+              if (dtc.function?.name) accumulatedToolCalls[index].function.name = dtc.function.name;
+              if (dtc.function?.arguments) accumulatedToolCalls[index].function.arguments += dtc.function.arguments;
+            }
           }
         }
       }
     }
-    if (accumulatedToolCalls.length > 0) {
-      const executedTools = await this.executeToolCalls(accumulatedToolCalls as OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]);
-      const finalResponse = await this.generateToolResponse(message, conversationHistory, accumulatedToolCalls as OpenAI.Chat.Completions.ChatCompletionMessageToolCall[], executedTools, systemPrompt);
+    if (Object.keys(accumulatedToolCalls).length > 0) {
+      const executedTools = await this.executeToolCalls(Object.values(accumulatedToolCalls) as OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]);
+      const finalResponse = await this.generateToolResponse(message, conversationHistory, Object.values(accumulatedToolCalls) as OpenAI.Chat.Completions.ChatCompletionMessageToolCall[], executedTools, systemPrompt);
       return { content: finalResponse, toolCalls: executedTools };
     }
     return { content: fullContent };

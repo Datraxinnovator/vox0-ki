@@ -10,6 +10,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
     messages: [],
     sessionId: crypto.randomUUID(),
     isProcessing: false,
+    streamingMessage: '',
     model: 'google-ai-studio/gemini-2.5-flash',
     systemPrompt: 'You are a helpful AI assistant.',
     enabledTools: ['web_search', 'get_weather', 'd1_db', 'mcp_server']
@@ -60,6 +61,9 @@ export class ChatAgent extends Agent<Env, ChatState> {
     if (model && model !== this.state.model) {
       this.setState({ ...this.state, model });
       this.chatHandler?.updateModel(model);
+    }
+    if (!this.chatHandler) {
+      this.chatHandler = new ChatHandler(this.env.CF_AI_BASE_URL, this.env.CF_AI_API_KEY, this.state.model);
     }
     const userMessage = createMessage('user', message.trim());
     this.setState({
@@ -126,7 +130,10 @@ export class ChatAgent extends Agent<Env, ChatState> {
   }
   private handleModelUpdate(body: { model: string }): Response {
     this.setState({ ...this.state, model: body.model });
-    this.chatHandler?.updateModel(body.model);
+    if (!this.chatHandler) {
+      this.chatHandler = new ChatHandler(this.env.CF_AI_BASE_URL, this.env.CF_AI_API_KEY, body.model);
+    }
+    this.chatHandler.updateModel(body.model);
     return Response.json({ success: true, data: this.state });
   }
   private handleSystemPromptUpdate(body: { systemPrompt: string }): Response {
