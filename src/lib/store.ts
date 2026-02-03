@@ -71,7 +71,7 @@ export const useAgentStore = create<AgentState>()(
           systemPrompt: 'You are a Vox0-ki Intelligence Engine. Execute all directives with extreme precision and utilize premium protocols.',
           model: 'google-ai-studio/gemini-2.5-flash',
           tools: ['web_search', 'get_weather', 'd1_db', 'mcp_server'],
-          lastEdited: Date.now(),
+          lastEdited: 1738552068000,
         }
       ],
       addAgent: (agent) => set((state) => ({ agents: [agent, ...state.agents] })),
@@ -108,7 +108,7 @@ export const useVaultStore = create<VaultState>()(
   persist(
     (set) => ({
       secrets: [
-        { id: 's-1', name: 'OPENAI_API_KEY', value: 'sk-���•••••••••••', lastRotated: '2 days ago' },
+        { id: 's-1', name: 'OPENAI_API_KEY', value: 'sk-***•••••••••••', lastRotated: '2 days ago' },
       ],
       addSecret: (s) => set((state) => ({
         secrets: [

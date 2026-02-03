@@ -12,8 +12,9 @@ export function DashboardPage() {
   const agents = useAgentStore((s) => s.agents);
   const addAgent = useAgentStore((s) => s.addAgent);
   const deleteAgent = useAgentStore((s) => s.deleteAgent);
-  const userName = useAuthStore((s) => s.user?.name);
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const userName = user?.name || 'Builder';
   const handleCreateAgent = () => {
     const id = crypto.randomUUID();
     addAgent({
@@ -35,7 +36,7 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center gap-4 text-primary font-bold text-sm mb-2 uppercase tracking-widest">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> 
+                <Sparkles className="w-4 h-4" />
                 <span>Vox0-ki HQ</span>
               </div>
               <div className="h-1 w-1 rounded-full bg-zinc-800" />
@@ -44,7 +45,7 @@ export function DashboardPage() {
                 <span className="text-[10px]">99.9% Uptime</span>
               </div>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-white">Welcome, <span className="text-gradient">{userName || 'Builder'}</span></h1>
+            <h1 className="text-4xl font-bold tracking-tight text-white">Welcome, <span className="text-gradient">{userName}</span></h1>
             <p className="text-zinc-400 mt-1">Orchestrate your fleet of autonomous sovereign intelligences.</p>
           </div>
           <Button onClick={handleCreateAgent} className="btn-gradient px-8 py-7 rounded-2xl shadow-glow">
@@ -128,7 +129,7 @@ export function DashboardPage() {
         )}
       </div>
       <footer className="mt-20 pt-12 border-t border-white/5 text-center space-y-2">
-        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Vox0-ki Platform v1.2.0 • Build ID: f7e2a9b</p>
+        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Vox0-ki Platform v1.2.0 �� Build ID: f7e2a9b</p>
         <p className="text-[9px] text-zinc-700 italic">AI capacity is subject to global model constraints. High-priority routing is enabled for this session.</p>
       </footer>
     </AppLayout>
