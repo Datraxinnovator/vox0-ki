@@ -33,7 +33,6 @@ export class ChatAgent extends Agent<Env, ChatState> {
         return this.handleGetMessages();
       }
       if (method === 'POST') {
-        // Robust JSON parsing for all POST routes
         let body;
         try {
           body = await request.json();
@@ -52,7 +51,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
       return Response.json({ success: false, error: API_RESPONSES.NOT_FOUND }, { status: 404 });
     } catch (error) {
       console.error('[FATAL AGENT ERROR]', error);
-      this.setState({ ...this.state, isProcessing: false }); // Reset state on crash
+      this.setState({ ...this.state, isProcessing: false });
       return Response.json({ success: false, error: API_RESPONSES.INTERNAL_ERROR, detail: String(error) }, { status: 500 });
     }
   }
@@ -64,11 +63,9 @@ export class ChatAgent extends Agent<Env, ChatState> {
     if (!message?.trim()) {
       return Response.json({ success: false, error: API_RESPONSES.MISSING_MESSAGE }, { status: 400 });
     }
-    console.log(`[CHAT] Processing message (${message.length} chars). Model: ${model || this.state.model}. Stream: ${!!stream}`);
     if (model && model !== this.state.model) {
-      const newModel = model;
-      this.setState({ ...this.state, model: newModel });
-      this.chatHandler?.updateModel(newModel);
+      this.setState({ ...this.state, model });
+      this.chatHandler?.updateModel(model);
     }
     if (!this.chatHandler) {
       this.chatHandler = new ChatHandler(this.env.CF_AI_BASE_URL, this.env.CF_AI_API_KEY, this.state.model);
@@ -84,39 +81,37 @@ export class ChatAgent extends Agent<Env, ChatState> {
         const { readable, writable } = new TransformStream();
         const writer = writable.getWriter();
         const encoder = createEncoder();
-        // Background streaming loop
+        // Define scoped state for error recovery
+        const snapshotState = { ...this.state };
         (async () => {
-          console.log(`[STREAM] Initializing neural stream for ${this.state.sessionId}`);
           try {
             this.setState({ ...this.state, streamingMessage: '' });
-            const currentState = this.state;
             const response = await this.chatHandler!.processMessage(
               message,
-              currentState.messages,
+              snapshotState.messages,
               (chunk: string) => {
                 this.setState({
                   ...this.state,
                   streamingMessage: (this.state.streamingMessage || '') + chunk
                 });
-                writer.write(encoder.encode(chunk)).catch(e => console.error('[STREAM WRITE ERROR]', e));
+                writer.write(encoder.encode(chunk)).catch(() => {});
               },
-              currentState
+              snapshotState
             );
             const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
             this.setState({
-              ...currentState,
-              messages: [...currentState.messages, assistantMessage],
+              ...this.state,
+              messages: [...this.state.messages, assistantMessage],
               isProcessing: false,
               streamingMessage: ''
             });
-            console.log(`[STREAM COMPLETE] ${this.state.sessionId}`);
           } catch (error) {
             console.error('[STREAM ERROR]', error);
             const errorText = `[Neural Stream Interruption] ${String(error)}`;
             writer.write(encoder.encode(errorText)).catch(() => {});
             this.setState({
-              ...currentState,
-              messages: [...currentState.messages, createMessage('assistant', errorText)],
+              ...snapshotState,
+              messages: [...snapshotState.messages, createMessage('assistant', errorText)],
               isProcessing: false,
               streamingMessage: ''
             });
@@ -126,7 +121,6 @@ export class ChatAgent extends Agent<Env, ChatState> {
         })();
         return createStreamResponse(readable);
       }
-      // Non-streaming path
       const response = await this.chatHandler!.processMessage(message, this.state.messages, undefined, this.state);
       const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
       this.setState({ ...this.state, messages: [...this.state.messages, assistantMessage], isProcessing: false });
@@ -138,35 +132,31 @@ export class ChatAgent extends Agent<Env, ChatState> {
     }
   }
   private handleClearMessages(): Response {
-    console.log(`[CLEAR] Resetting memory for ${this.state.sessionId}`);
     this.setState({ ...this.state, messages: [] });
     return Response.json({ success: true, data: this.state });
   }
-  private handleModelUpdate(body: unknown): Response {
-    const { model } = body as { model: string };
+  private handleModelUpdate(body: any): Response {
+    const { model } = body;
     if (!model || typeof model !== 'string') {
       return Response.json({ success: false, error: API_RESPONSES.MISSING_MESSAGE }, { status: 400 });
     }
-    console.log(`[CONFIG] Switching model to ${model}`);
     this.setState({ ...this.state, model });
     this.chatHandler?.updateModel(model);
     return Response.json({ success: true, data: this.state });
   }
-  private handleSystemPromptUpdate(body: unknown): Response {
-    const { systemPrompt } = body as { systemPrompt: string };
+  private handleSystemPromptUpdate(body: any): Response {
+    const { systemPrompt } = body;
     if (!systemPrompt || typeof systemPrompt !== 'string') {
       return Response.json({ success: false, error: API_RESPONSES.MISSING_MESSAGE }, { status: 400 });
     }
-    console.log(`[CONFIG] Updating system prompt (${systemPrompt.length} chars)`);
     this.setState({ ...this.state, systemPrompt });
     return Response.json({ success: true, data: this.state });
   }
-  private handleToolsUpdate(body: unknown): Response {
-    const { tools } = body as { tools: string[] };
+  private handleToolsUpdate(body: any): Response {
+    const { tools } = body;
     if (!Array.isArray(tools)) {
       return Response.json({ success: false, error: API_RESPONSES.MISSING_MESSAGE }, { status: 400 });
     }
-    console.log(`[CONFIG] Updating enabled tools: ${tools.join(', ')}`);
     this.setState({ ...this.state, enabledTools: tools });
     return Response.json({ success: true, data: this.state });
   }

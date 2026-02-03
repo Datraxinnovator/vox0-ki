@@ -1,21 +1,66 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAgentStore } from '@/lib/store';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Layers, Copy, Star, Users, ArrowUpRight } from 'lucide-react';
+import { Layers, Copy, Star, Users } from 'lucide-react';
 import { toast } from 'sonner';
 const BLUEPRINTS = [
-  { id: 'b-1', name: 'Code Auditor Elite', role: 'Security Engineer', downloads: '1.2k', rating: 4.9, tags: ['Security', 'Node.js'] },
-  { id: 'b-2', name: 'Market Intel Pro', role: 'Financial Analyst', downloads: '850', rating: 4.8, tags: ['Finance', 'Real-time'] },
-  { id: 'b-3', name: 'Customer Concierge', role: 'Support Architect', downloads: '2.1k', rating: 4.7, tags: ['CX', 'Automated'] },
-  { id: 'b-4', name: 'SEO Strategist', role: 'Growth Hacker', downloads: '640', rating: 4.6, tags: ['Marketing', 'Search'] },
-  { id: 'b-5', name: 'D1 Data Architect', role: 'Database Admin', downloads: '430', rating: 5.0, tags: ['Cloudflare', 'SQL'] },
-  { id: 'b-6', name: 'Creative Copywriter', role: 'Content Lead', downloads: '3.4k', rating: 4.8, tags: ['Writing', 'GPT-4'] },
+  { 
+    id: 'b-1', 
+    name: 'Code Auditor Elite', 
+    role: 'Security Engineer', 
+    downloads: '1.2k', 
+    rating: 4.9, 
+    tags: ['Security', 'Node.js'],
+    config: {
+      name: 'Code Auditor Elite',
+      role: 'Security Engineer',
+      systemPrompt: 'You are an elite cybersecurity specialist. Analyze code for vulnerabilities with precision.',
+      tools: ['mcp_server', 'd1_db'],
+      model: 'google-ai-studio/gemini-2.5-flash'
+    }
+  },
+  { 
+    id: 'b-2', 
+    name: 'Market Intel Pro', 
+    role: 'Financial Analyst', 
+    downloads: '850', 
+    rating: 4.8, 
+    tags: ['Finance', 'Real-time'],
+    config: {
+      name: 'Market Intel Pro',
+      role: 'Financial Analyst',
+      systemPrompt: 'You are a high-frequency trading analyst. Monitor global markets and identify alpha.',
+      tools: ['web_search', 'get_weather'],
+      model: 'google-ai-studio/gemini-2.5-pro'
+    }
+  },
+  { 
+    id: 'b-3', 
+    name: 'D1 Data Architect', 
+    role: 'Database Admin', 
+    downloads: '430', 
+    rating: 5.0, 
+    tags: ['Cloudflare', 'SQL'],
+    config: {
+      name: 'D1 Data Architect',
+      role: 'Database Admin',
+      systemPrompt: 'You are a database optimization engine. Structure schemas for maximum edge performance.',
+      tools: ['d1_db'],
+      model: 'google-ai-studio/gemini-2.0-flash'
+    }
+  },
 ];
 export function GalleryPage() {
-  const handleClone = (name: string) => {
-    toast.success(`Blueprint ${name} cloned to your forge.`);
+  const navigate = useNavigate();
+  const cloneBlueprint = useAgentStore((s) => s.cloneBlueprint);
+  const handleClone = (bp: typeof BLUEPRINTS[0]) => {
+    const newId = cloneBlueprint(bp.config);
+    toast.success(`${bp.name} architecture successfully cloned to your forge.`);
+    navigate(`/builder/${newId}`);
   };
   return (
     <AppLayout container className="bg-black">
@@ -60,8 +105,8 @@ export function GalleryPage() {
                 </div>
               </CardContent>
               <CardFooter className="pt-0">
-                <Button 
-                  onClick={() => handleClone(bp.name)}
+                <Button
+                  onClick={() => handleClone(bp)}
                   className="w-full bg-zinc-900 hover:bg-primary hover:text-black border border-white/5 font-bold rounded-xl transition-all"
                 >
                   <Copy className="w-4 h-4 mr-2" /> Clone Architecture
