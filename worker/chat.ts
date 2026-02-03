@@ -74,14 +74,19 @@ export class ChatHandler {
           if (dtc.index !== undefined && dtc.index >= 0) {
             const index = dtc.index;
             if (!accumulatedToolCalls[index]) {
+              const initName = dtc.function?.name ?? '';
+              const initArgs = dtc.function?.arguments ?? '';
               accumulatedToolCalls[index] = {
                 id: dtc.id || `tool_${Date.now()}_${index}`,
                 type: 'function',
-                function: { name: dtc.function?.name || '', arguments: dtc.function?.arguments || '' }
+                function: { name: initName, arguments: initArgs }
               };
             } else {
-              if (dtc.function?.name) accumulatedToolCalls[index].function.name = dtc.function.name;
-              if (dtc.function?.arguments) accumulatedToolCalls[index].function.arguments += dtc.function.arguments;
+              const functionDelta = dtc.function;
+              if (functionDelta) {
+                if (functionDelta.name) accumulatedToolCalls[index].function.name = functionDelta.name;
+                if (functionDelta.arguments) accumulatedToolCalls[index].function.arguments += functionDelta.arguments;
+              }
             }
           }
         }
