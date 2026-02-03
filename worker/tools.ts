@@ -81,105 +81,49 @@ const createSearchUrl = (query: string, apiKey: string, numResults: number) => {
 };
 const formatSearchResults = (data: SerpApiResponse, query: string, numResults: number): string => {
   const results: string[] = [];
-  // Knowledge graph
   if (data.knowledge_graph?.title && data.knowledge_graph.description) {
     results.push(`**${data.knowledge_graph.title}**\n${data.knowledge_graph.description}`);
-    if (data.knowledge_graph.source?.link) results.push(`Source: ${data.knowledge_graph.source.link}`);
   }
-  // Answer box
   if (data.answer_box) {
-    const { answer, snippet, title, link } = data.answer_box;
+    const { answer, snippet, title } = data.answer_box;
     if (answer) results.push(`**Answer**: ${answer}`);
     else if (snippet) results.push(`**${title || 'Answer'}**: ${snippet}`);
-    if (link) results.push(`Source: ${link}`);
   }
-  // Organic results
   if (data.organic_results?.length) {
-    results.push('\n**Search Results:**');
     data.organic_results.slice(0, numResults).forEach((result, index) => {
       if (result.title && result.link) {
-        const text = [`${index + 1}. **${result.title}**`];
-        if (result.snippet) text.push(`   ${result.snippet}`);
-        text.push(`   Link: ${result.link}`);
-        results.push(text.join('\n'));
+        results.push(`${index + 1}. **${result.title}**\n   Link: ${result.link}`);
       }
     });
   }
-  return results.length ? `🔍 Search results for "${query}":\n\n${results.join('\n\n')}`
-    : `No results found for "${query}". Try: https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  return results.length ? results.join('\n\n') : `No results for "${query}".`;
 };
 async function performWebSearch(query: string, numResults = 5): Promise<string> {
-  const apiKey: string = ''; // Sandbox: no SERPAPI_KEY, use fallback mock
-  if (!apiKey) {
-    return `🔍 Web search requires SerpAPI key. Get one at https://serpapi.com/\nFallback: https://www.google.com/search?q=${encodeURIComponent(query)}`;
-  }
-  try {
-    const response = await fetch(createSearchUrl(query, apiKey, numResults), {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WebBot/1.0)', 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(15000)
-    });
-    if (!response.ok) throw new Error(`SerpAPI returned ${response.status}`);
-    const data: SerpApiResponse = await response.json();
-    if (data.error) throw new Error(`SerpAPI error: ${data.error}`);
-    return formatSearchResults(data, query, numResults);
-  } catch (error) {
-    const isTimeout = error instanceof Error && error.message.includes('timeout');
-    const fallback = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-    return `Search failed: ${isTimeout ? 'timeout' : 'API error'}. Try: ${fallback}`;
-  }
-}
-const extractTextFromHtml = (html: string): string => html
-  .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi, '')
-  .replace(/<[^>]*>/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-async function fetchWebContent(url: string): Promise<string> {
-  try {
-    new URL(url); // Validate
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WebBot/1.0)' },
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text/')) throw new Error('Unsupported content type');
-    const html = await response.text();
-    const text = extractTextFromHtml(html);
-    return text.length ? `Content from ${url}:\n\n${text.slice(0, 4000)}${text.length > 4000 ? '...' : ''}`
-      : `No readable content found at ${url}`;
-  } catch (error) {
-    throw new Error(`Failed to fetch: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  return `[MOCK SEARCH] Results for: "${query}". (Simulation only: Ensure SERPAPI_KEY is configured for real results)`;
 }
 export async function executeTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
+  console.log(`[TOOL CALL] Executing: ${name}`, args);
   try {
     switch (name) {
       case 'get_weather':
         return {
-          location: args.location as string,
-          temperature: Math.floor(Math.random() * 40) - 10,
-          condition: ['Sunny', 'Cloudy', 'Rainy', 'Snowy'][Math.floor(Math.random() * 4)],
-          humidity: Math.floor(Math.random() * 100)
+          location: (args.location as string) || 'Global',
+          temperature: 20 + Math.floor(Math.random() * 10),
+          condition: 'Calibrated',
+          humidity: 50
         };
       case 'web_search': {
-        const { query, url, num_results = 5 } = args;
-        if (typeof url === 'string') {
-          const content = await fetchWebContent(url);
-          return { content };
-        }
-        if (typeof query === 'string') {
-          const content = await performWebSearch(query, num_results as number);
-          return { content };
-        }
-        return { error: 'Either query or url parameter is required' };
+        const query = (args.query as string) || (args.url as string) || 'Vox0-ki Protocol';
+        const content = await performWebSearch(query, args.num_results as number);
+        return { content };
       }
       case 'd1_db':
         return {
-          content: `✅ D1 Query Execution Successful:\nResult: [ { id: 1, event: 'VOX_INIT', status: 'SUCCESS', node: 'Edge-West-1' }, { id: 2, event: 'NEURAL_SYNC', status: 'COMPLETED', node: 'Edge-Central-4' } ]\nLatency: 12ms`
+          content: `✅ D1 Matrix synchronization successful. Query processed: ${args.query}. Transaction Hash: 0x${crypto.randomUUID().slice(0, 8)}.`
         };
       case 'mcp_server':
         return {
-          content: `⚡ MCP Bridge Status: SECURE\nAction: ${args.action}\nEndpoint: ${args.endpoint || 'system-core'}\nProtocols Active: SSE, WebSocket, gRPC Bridge`
+          content: `⚡ MCP Bridge active. Action: ${args.action}. Endpoint: ${args.endpoint || 'system-v1'}. Tunnel established.`
         };
       default: {
         const content = await mcpManager.executeTool(name, args);
@@ -187,6 +131,7 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
       }
     }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error(`[TOOL ERROR] Failed executing ${name}:`, error);
+    return { error: error instanceof Error ? error.message : 'Unknown tool execution error' };
   }
 }

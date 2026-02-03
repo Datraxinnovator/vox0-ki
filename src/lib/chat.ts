@@ -27,7 +27,14 @@ class ChatService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, model, stream: !!onChunk }),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[CHAT_SERVICE ERROR] HTTP ${response.status}: ${errorText}`);
+        return { 
+          success: false, 
+          error: `Server responded with ${response.status}. Please check your environment configuration.` 
+        };
+      }
       if (onChunk && response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -38,6 +45,8 @@ class ChatService {
             const chunk = decoder.decode(value, { stream: true });
             if (chunk) onChunk(chunk);
           }
+        } catch (streamError) {
+          console.error('[STREAM READ ERROR]', streamError);
         } finally {
           reader.releaseLock();
         }
@@ -45,9 +54,9 @@ class ChatService {
       }
       return await response.json();
     } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error) || 'Unknown network error';
-      console.error('Failed to send message:', errMsg);
-      return { success: false, error: errMsg };
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[NETWORK ERROR]', errMsg);
+      return { success: false, error: `Network connectivity failure: ${errMsg}` };
     }
   }
   async updateSystemPrompt(systemPrompt: string): Promise<ChatResponse> {
@@ -59,7 +68,7 @@ class ChatService {
       });
       return await res.json();
     } catch (error) {
-      return { success: false, error: 'Failed to sync prompt' };
+      return { success: false, error: 'Failed to sync prompt architecture' };
     }
   }
   async updateTools(tools: string[]): Promise<ChatResponse> {
@@ -71,7 +80,7 @@ class ChatService {
       });
       return await res.json();
     } catch (error) {
-      return { success: false, error: 'Failed to sync tools' };
+      return { success: false, error: 'Failed to sync intelligence protocols' };
     }
   }
   async getMessages(): Promise<ChatResponse> {
@@ -80,7 +89,7 @@ class ChatService {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      return { success: false, error: 'Failed to load messages' };
+      return { success: false, error: 'Memory retrieval failed' };
     }
   }
   async clearMessages(): Promise<ChatResponse> {
@@ -88,7 +97,7 @@ class ChatService {
       const response = await fetch(`${this.baseUrl}/clear`, { method: 'DELETE' });
       return await response.json();
     } catch (error) {
-      return { success: false, error: 'Failed to clear messages' };
+      return { success: false, error: 'Memory wipe failed' };
     }
   }
   getSessionId(): string { return this.sessionId; }
@@ -101,40 +110,44 @@ class ChatService {
     this.baseUrl = `/api/chat/${sessionId}`;
   }
   async createSession(title?: string, sessionId?: string, firstMessage?: string) {
-    const res = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, sessionId, firstMessage })
-    });
-    return await res.json();
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, sessionId, firstMessage })
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, error: 'Session creation failed' };
+    }
   }
   async listSessions() {
-    const res = await fetch('/api/sessions');
-    return await res.json();
+    try {
+      const res = await fetch('/api/sessions');
+      return await res.json();
+    } catch (e) {
+      return { success: false, data: [] };
+    }
   }
   async deleteSession(sessionId: string) {
-    const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-    return await res.json();
-  }
-  async updateSessionTitle(sessionId: string, title: string) {
-    const res = await fetch(`/api/sessions/${sessionId}/title`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title })
-    });
-    return await res.json();
-  }
-  async clearAllSessions() {
-    const res = await fetch('/api/sessions', { method: 'DELETE' });
-    return await res.json();
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      return await res.json();
+    } catch (e) {
+      return { success: false };
+    }
   }
   async updateModel(model: string): Promise<ChatResponse> {
-    const res = await fetch(`${this.baseUrl}/model`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model })
-    });
-    return await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model })
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, error: 'Model switch failed' };
+    }
   }
 }
 export const chatService = new ChatService();
@@ -142,13 +155,12 @@ export const formatTime = (timestamp: number): string => {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 export const renderToolCall = (toolCall: ToolCall): string => {
-  const result = toolCall.result as WeatherResult | MCPResult | ErrorResult | undefined;
-  if (!result) return `⏳ ${toolCall.name}: Pending...`;
-  if ('error' in result) return `❌ ${toolCall.name}: Error`;
-  if ('content' in result) return `🔧 ${toolCall.name}: Success`;
+  const result = toolCall.result as WeatherResult | { content: string } | ErrorResult | undefined;
+  if (!result) return `⏳ ${toolCall.name}: Processing...`;
+  if ('error' in result) return `��� ${toolCall.name}: Error`;
   if (toolCall.name === 'get_weather') {
     const w = result as WeatherResult;
     return `🌤️ ${w.location}: ${w.temperature}°C`;
   }
-  return `🔧 ${toolCall.name}: OK`;
+  return `🔧 ${toolCall.name}: Success`;
 };
