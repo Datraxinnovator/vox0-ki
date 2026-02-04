@@ -81,22 +81,24 @@ export class ChatAgent extends Agent<Env, ChatState> {
         const writer = writable.getWriter();
         const encoder = createEncoder();
         // Define scoped state for error recovery
-        const snapshotState = { ...this.state };
+        let streamingContent = '';
         try {
           (async () => {
             try {
               this.setState({ ...this.state, streamingMessage: '' });
               const response = await this.chatHandler!.processMessage(
                 message,
-                snapshotState.messages,
+                this.state.messages,
                 (chunk: string) => {
+                  streamingContent += chunk;
+                  const currentState = { ...this.state };
                   this.setState({
-                    ...this.state,
-                    streamingMessage: (this.state.streamingMessage || '') + chunk
+                    ...currentState,
+                    streamingMessage: streamingContent
                   });
                   writer.write(encoder.encode(chunk)).catch(() => {});
                 },
-                snapshotState
+                this.state
               );
               const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
               this.setState({
@@ -109,9 +111,10 @@ export class ChatAgent extends Agent<Env, ChatState> {
               console.error('[STREAM ERROR]', error);
               const errorText = `[Neural Stream Interruption] ${String(error)}`;
               writer.write(encoder.encode(errorText)).catch(() => {});
+              const errorMsg = createMessage('assistant', errorText);
               this.setState({
-                ...snapshotState,
-                messages: [...snapshotState.messages, createMessage('assistant', errorText)],
+                ...this.state,
+                messages: [...this.state.messages, errorMsg],
                 isProcessing: false,
                 streamingMessage: ''
               });
