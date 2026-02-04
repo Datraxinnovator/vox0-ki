@@ -20,6 +20,7 @@ import { VaultPage } from '@/pages/VaultPage'
 import { TuningPage } from '@/pages/TuningPage'
 import { ManualPage } from '@/pages/ManualPage'
 import { SupportPage } from '@/pages/SupportPage'
+import { Toaster } from '@/components/ui/sonner';
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
@@ -71,9 +72,12 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <RouterProvider router={router} />
-      </ErrorBoundary>
+      <>
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+        </ErrorBoundary>
+        <Toaster richColors closeButton theme="dark" />
+      </>
     </QueryClientProvider>
   </StrictMode>,
 )

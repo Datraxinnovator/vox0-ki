@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Zap, Shield, Cpu, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Toaster } from '@/components/ui/sonner';
 export function HomePage() {
   return (
     <div className="min-h-screen bg-black text-foreground selection:bg-primary/20 selection:text-black">
@@ -64,7 +63,6 @@ export function HomePage() {
           </p>
         </div>
       </footer>
-      <Toaster richColors closeButton theme="dark" />
     </div>
   );
 }
