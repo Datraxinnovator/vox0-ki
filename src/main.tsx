@@ -94,14 +94,12 @@ const router = createBrowserRouter([
   },
 ]);
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <>
-        <ErrorBoundary>
-          <RouterProvider router={router} />
-        </ErrorBoundary>
-        <Toaster richColors closeButton theme="dark" />
-      </>
-    </QueryClientProvider>
-  </StrictMode>,
+  <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
+      <StrictMode>
+        <RouterProvider router={router} />
+      </StrictMode>
+    </ErrorBoundary>
+    <Toaster richColors closeButton theme="dark" />
+  </QueryClientProvider>,
 )

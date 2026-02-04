@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams, Navigate } from 'react-router-dom';
 import { useAgentStore } from '@/lib/store';
 import { BuilderLayout } from '@/components/builder/BuilderLayout';
 import { ConfigPanel } from '@/components/builder/ConfigPanel';
@@ -9,17 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 export function BuilderPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const getAgent = useAgentStore((s) => s.getAgent);
+  const { id } = useParams<{id: string}>();
+  const agent = useAgentStore((s) => id ? s.getAgent(id) : null);
   const isMobile = useIsMobile();
-  const agent = id ? getAgent(id) : null;
-  useEffect(() => {
-    if (!agent && id) {
-      navigate('/dashboard');
-    }
-  }, [agent, id, navigate]);
-  if (!agent) return null;
+
+  if (!id || !agent) return <Navigate to='/dashboard' replace />;
+
   return (
     <BuilderLayout agent={agent}>
       {isMobile ? (
