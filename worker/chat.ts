@@ -8,7 +8,7 @@ export class ChatHandler {
   private mockMode: boolean = false;
   constructor(aiGatewayUrl: string, apiKey: string, model: string) {
     this.model = model;
-    this.mockMode = !aiGatewayUrl?.trim() || !apiKey?.trim() || aiGatewayUrl.includes('YOUR_ACCOUNT_ID');
+    this.mockMode = !aiGatewayUrl?.trim() || !apiKey?.trim() || aiGatewayUrl?.toLowerCase().includes('YOUR') || aiGatewayUrl?.toLowerCase().includes('YOUR_ACCOUNT_ID') || apiKey?.toLowerCase().includes('your');
     if (this.mockMode) {
       console.log('ChatHandler: Sandbox Mode (Mocking API)');
       return;
@@ -53,7 +53,7 @@ export class ChatHandler {
       return this.handleNonStreamResponse(completion as OpenAI.Chat.Completions.ChatCompletion, message, conversationHistory, agentState?.systemPrompt);
     } catch (error) {
       console.error('OpenAI API Error:', error);
-      throw error;
+      return await this.handleMockResponse(message, conversationHistory, onChunk, agentState);
     }
   }
   private async handleStreamResponse(
