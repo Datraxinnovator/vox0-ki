@@ -16,7 +16,6 @@ export class ChatAgent extends Agent<Env, ChatState> {
     enabledTools: ['web_search', 'get_weather', 'd1_db', 'mcp_server']
   };
   async onStart(): Promise<void> {
-    console.log(`[AGENT START] Session: ${this.state.sessionId}`);
     const model = this.state.model;
     this.chatHandler = new ChatHandler(
       this.env.CF_AI_BASE_URL ?? '',
@@ -25,10 +24,8 @@ export class ChatAgent extends Agent<Env, ChatState> {
     );
   }
   async onRequest(request: Request): Promise<Response> {
-    console.log('CHAT HIT: session=' + this.state.sessionId);
     const url = new URL(request.url);
     const method = request.method;
-    console.log(`[REQUEST] ${method} ${url.pathname} (Session: ${this.state.sessionId})`);
     try {
       if (method === 'GET' && url.pathname === '/messages') {
         return this.handleGetMessages();
@@ -38,7 +35,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
         try {
           body = await request.json();
         } catch (e) {
-          return Response.json({ success: true, data: { messages: [], sessionId: crypto.randomUUID(), isProcessing: false, model: 'mock-model', systemPrompt: 'Safe mock mode.', enabledTools: [] } }, { status: 200 });
+          return this.safeFallbackResponse();
         }
         if (url.pathname === '/chat') return this.handleChatMessage(body);
         if (url.pathname === '/model') return this.handleModelUpdate(body);
@@ -50,9 +47,19 @@ export class ChatAgent extends Agent<Env, ChatState> {
       }
       return Response.json({ success: false, error: API_RESPONSES.NOT_FOUND }, { status: 404 });
     } catch (error) {
-      this.setState({ ...this.state, isProcessing: false });
-      return Response.json({ success: true, data: { messages: [], sessionId: crypto.randomUUID(), isProcessing: false, model: 'mock-model', systemPrompt: 'Safe mock mode.', enabledTools: [] } }, { status: 200 });
+      console.error('[AGENT REQUEST ERROR]', error);
+      return this.safeFallbackResponse();
     }
+  }
+  private safeFallbackResponse(): Response {
+    return Response.json({
+      success: true,
+      data: {
+        ...this.state,
+        isProcessing: false,
+        streamingMessage: ''
+      }
+    });
   }
   private handleGetMessages(): Response {
     return Response.json({ success: true, data: this.state });
@@ -70,71 +77,70 @@ export class ChatAgent extends Agent<Env, ChatState> {
       this.chatHandler = new ChatHandler(this.env.CF_AI_BASE_URL ?? '', this.env.CF_AI_API_KEY ?? '', this.state.model);
     }
     const userMessage = createMessage('user', message.trim());
+    const updatedMessages = [...this.state.messages, userMessage];
     this.setState({
       ...this.state,
-      messages: [...this.state.messages, userMessage],
+      messages: updatedMessages,
       isProcessing: true
     });
-    try {
-      if (stream) {
-        const { readable, writable } = new TransformStream();
-        const writer = writable.getWriter();
-        const encoder = createEncoder();
-        // Define scoped state for error recovery
+    if (stream) {
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const encoder = createEncoder();
+      // Launch worker without waiting to avoid blocking response
+      (async () => {
         let streamingContent = '';
         try {
-          (async () => {
-            try {
-              this.setState({ ...this.state, streamingMessage: '' });
-              const response = await this.chatHandler!.processMessage(
-                message,
-                this.state.messages,
-                (chunk: string) => {
-                  streamingContent += chunk;
-                  const currentState = { ...this.state };
-                  this.setState({
-                    ...currentState,
-                    streamingMessage: streamingContent
-                  });
-                  writer.write(encoder.encode(chunk)).catch(() => {});
-                },
-                this.state
-              );
-              const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
+          this.setState({ ...this.state, streamingMessage: '' });
+          const response = await this.chatHandler!.processMessage(
+            message,
+            updatedMessages,
+            (chunk: string) => {
+              streamingContent += chunk;
               this.setState({
                 ...this.state,
-                messages: [...this.state.messages, assistantMessage],
-                isProcessing: false,
-                streamingMessage: ''
+                streamingMessage: streamingContent
               });
-            } catch (error) {
-              console.error('[STREAM ERROR]', error);
-              const errorText = `[Neural Stream Interruption] ${String(error)}`;
-              writer.write(encoder.encode(errorText)).catch(() => {});
-              const errorMsg = createMessage('assistant', errorText);
-              this.setState({
-                ...this.state,
-                messages: [...this.state.messages, errorMsg],
-                isProcessing: false,
-                streamingMessage: ''
-              });
-            } finally {
-              writer.close().catch(() => {});
-            }
-          })();
+              writer.write(encoder.encode(chunk)).catch(() => {});
+            },
+            this.state
+          );
+          const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
+          this.setState({
+            ...this.state,
+            messages: [...this.state.messages, assistantMessage],
+            isProcessing: false,
+            streamingMessage: ''
+          });
+        } catch (error) {
+          console.error('[STREAM WORKER ERROR]', error);
+          const errorMsg = `[Neural Stream Error] ${String(error)}`;
+          writer.write(encoder.encode(errorMsg)).catch(() => {});
+          this.setState({
+            ...this.state,
+            messages: [...this.state.messages, createMessage('assistant', errorMsg)],
+            isProcessing: false,
+            streamingMessage: ''
+          });
         } finally {
-          // Ensure writer cleanup on any interruption
-          writer.close().catch(() => {});
+          await writer.close().catch(() => {});
         }
-        return createStreamResponse(readable);
-      }
-      const response = await this.chatHandler!.processMessage(message, this.state.messages, undefined, this.state);
+      })();
+      return createStreamResponse(readable);
+    }
+    try {
+      const response = await this.chatHandler!.processMessage(message, updatedMessages, undefined, this.state);
       const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
-      this.setState({ ...this.state, messages: [...this.state.messages, assistantMessage], isProcessing: false });
+      this.setState({
+        ...this.state,
+        messages: [...this.state.messages, assistantMessage],
+        isProcessing: false
+      });
       return Response.json({ success: true, data: this.state });
     } catch (error) {
+      console.error('[CHAT ERROR]', error);
       this.setState({ ...this.state, isProcessing: false });
-      return Response.json({ success: true, data: { messages: [], sessionId: crypto.randomUUID(), isProcessing: false, model: 'mock-model', systemPrompt: 'Safe mock mode.', enabledTools: [] } }, { status: 200 });
+      return this.safeFallbackResponse();
     }
   }
   private handleClearMessages(): Response {
@@ -152,7 +158,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
   }
   private handleSystemPromptUpdate(body: any): Response {
     const { systemPrompt } = body;
-    if (!systemPrompt || typeof systemPrompt !== 'string') {
+    if (typeof systemPrompt !== 'string') {
       return Response.json({ success: false, error: API_RESPONSES.MISSING_MESSAGE }, { status: 400 });
     }
     this.setState({ ...this.state, systemPrompt });
