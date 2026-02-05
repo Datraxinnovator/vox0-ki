@@ -24,6 +24,7 @@ class ChatService {
     onChunk?: (chunk: string) => void
   ): Promise<ChatResponse> {
     try {
+      console.log('POST to', this.sessionId);
       const response = await fetch(`${this.baseUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
