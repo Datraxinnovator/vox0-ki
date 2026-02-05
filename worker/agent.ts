@@ -81,17 +81,17 @@ export class ChatAgent extends Agent<Env, ChatState> {
     this.setState({
       ...this.state,
       messages: updatedMessages,
-      isProcessing: true
+      isProcessing: true,
+      streamingMessage: ''
     });
     if (stream) {
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
       const encoder = createEncoder();
-      // Launch worker without waiting to avoid blocking response
+      // Launch async stream background worker
       (async () => {
         let streamingContent = '';
         try {
-          this.setState({ ...this.state, streamingMessage: '' });
           const response = await this.chatHandler!.processMessage(
             message,
             updatedMessages,
@@ -103,7 +103,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
               });
               writer.write(encoder.encode(chunk)).catch(() => {});
             },
-            this.state
+            { ...this.state } // Use stable clone
           );
           const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
           this.setState({
@@ -129,7 +129,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
       return createStreamResponse(readable);
     }
     try {
-      const response = await this.chatHandler!.processMessage(message, updatedMessages, undefined, this.state);
+      const response = await this.chatHandler!.processMessage(message, updatedMessages, undefined, { ...this.state });
       const assistantMessage = createMessage('assistant', response.content, response.toolCalls);
       this.setState({
         ...this.state,
@@ -144,7 +144,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
     }
   }
   private handleClearMessages(): Response {
-    this.setState({ ...this.state, messages: [] });
+    this.setState({ ...this.state, messages: [], streamingMessage: '' });
     return Response.json({ success: true, data: this.state });
   }
   private handleModelUpdate(body: any): Response {

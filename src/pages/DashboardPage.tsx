@@ -4,11 +4,10 @@ import { useAgentStore, useAuthStore } from '@/lib/store';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Settings2, Trash2, Cpu, Clock, Search, Sparkles, Activity, Globe, Wifi } from 'lucide-react';
+import { Plus, Settings2, Trash2, Cpu, Clock, Search, Sparkles, Activity, Globe, Wifi, LayoutGrid } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 export function DashboardPage() {
   const agents = useAgentStore((s) => s.agents) ?? [];
   const addAgent = useAgentStore((s) => s.addAgent);
@@ -16,9 +15,9 @@ export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
-  const userName = user?.name || 'Builder';
-  const filteredAgents = agents.filter(a => 
-    a.name.toLowerCase().includes(search.toLowerCase()) || 
+  const userName = user?.name || 'Architect';
+  const filteredAgents = agents.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
     a.role.toLowerCase().includes(search.toLowerCase())
   );
   const handleCreateAgent = () => {
@@ -42,57 +41,57 @@ export function DashboardPage() {
   };
   return (
     <AppLayout container className="bg-black">
-      <div className="space-y-10 animate-fade-in">
+      <div className="space-y-10 animate-fade-in max-w-7xl mx-auto px-1 sm:px-0">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-primary/10 pb-8">
-          <div>
-            <div className="flex items-center gap-4 text-primary font-bold text-sm mb-2 uppercase tracking-widest">
+          <div className="space-y-1">
+            <div className="flex items-center gap-4 text-primary font-bold text-[10px] mb-2 uppercase tracking-[0.3em]">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3.5 h-3.5" />
                 <span>Vox0-ki HQ</span>
               </div>
               <div className="h-1 w-1 rounded-full bg-zinc-800" />
               <div className="flex items-center gap-1.5 text-zinc-500">
                 <Activity className="w-3 h-3 text-green-500" />
-                <span className="text-[10px]">99.9% Neural Uptime</span>
+                <span>99.9% Uptime</span>
               </div>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-white">Welcome, <span className="text-gradient">{userName}</span></h1>
-            <p className="text-zinc-400 mt-1">Orchestrate your fleet of {agents.length} autonomous sovereign intelligences.</p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">Welcome, <span className="text-gradient">{userName}</span></h1>
+            <p className="text-zinc-400 text-sm md:text-base">Orchestrate your fleet of {agents.length} autonomous sovereign intelligences.</p>
           </div>
-          <Button 
-            onClick={handleCreateAgent} 
-            className="btn-gradient px-8 py-7 rounded-2xl shadow-glow hover:-translate-y-1 transition-transform"
+          <Button
+            onClick={handleCreateAgent}
+            className="btn-gradient px-8 py-7 rounded-2xl shadow-glow hover:-translate-y-1 transition-transform group"
           >
-            <Plus className="w-5 h-5 mr-2" /> New Vox-Unit
+            <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" /> New Vox-Unit
           </Button>
         </div>
         {/* Status Summary & Search */}
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-          <div className="flex-1 w-full flex items-center gap-4 bg-zinc-900/30 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl group focus-within:border-primary/30 transition-colors">
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          <div className="flex-1 w-full flex items-center gap-4 bg-zinc-900/30 p-1 rounded-2xl border border-white/5 backdrop-blur-xl group focus-within:border-primary/30 transition-colors">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Filter by unit name or role..."
+                placeholder="Filter units by name or directive..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-zinc-600 h-11"
+                className="pl-12 bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-zinc-600 h-12"
               />
             </div>
           </div>
-          <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-             <div className="bg-zinc-950/50 border border-white/5 rounded-xl px-6 py-3 flex flex-col items-center justify-center min-w-[120px]">
-                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Active Units</span>
+          <div className="flex gap-4 w-full lg:w-auto overflow-x-auto no-scrollbar py-1">
+             <div className="bg-zinc-950/50 border border-white/5 rounded-xl px-6 py-3 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-0.5">Active Units</span>
                 <span className="text-xl font-mono text-primary font-bold">{agents.length}</span>
              </div>
-             <div className="bg-zinc-950/50 border border-white/5 rounded-xl px-6 py-3 flex flex-col items-center justify-center min-w-[120px]">
-                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Global Edge</span>
+             <div className="bg-zinc-950/50 border border-white/5 rounded-xl px-6 py-3 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-0.5">Edge Nodes</span>
                 <span className="text-xl font-mono text-primary font-bold">310+</span>
              </div>
           </div>
         </div>
         {/* Agents Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {filteredAgents.map((agent) => (
             <Card key={agent.id} className="group overflow-hidden border-primary/10 bg-zinc-950/40 backdrop-blur-md hover:border-primary/40 hover:shadow-glow transition-all duration-300 flex flex-col animate-scale-in">
               <CardHeader className="pb-4">
@@ -152,25 +151,29 @@ export function DashboardPage() {
         </div>
         {/* Empty State */}
         {agents.length === 0 && (
-          <div className="text-center py-32 bg-zinc-950/40 rounded-[3rem] border border-dashed border-primary/20 flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center mb-6 text-primary/30">
-              <Cpu className="w-10 h-10" />
+          <div className="text-center py-32 bg-zinc-950/40 rounded-[3rem] border border-dashed border-primary/20 flex flex-col items-center group">
+            <div className="w-24 h-24 rounded-full bg-primary/5 flex items-center justify-center mb-6 text-primary/20 group-hover:bg-primary/10 transition-colors">
+              <LayoutGrid className="w-10 h-10" />
             </div>
-            <p className="text-zinc-500 text-lg font-medium">Your forge is currently silent.</p>
-            <Button variant="link" onClick={handleCreateAgent} className="text-primary mt-2 font-bold uppercase tracking-widest text-xs hover:scale-105 transition-transform">Initialize your first unit →</Button>
+            <h3 className="text-xl font-bold text-white mb-2">The Forge is Silent</h3>
+            <p className="text-zinc-500 max-w-xs mx-auto mb-8">No sovereign units have been initialized in your workspace yet.</p>
+            <Button onClick={handleCreateAgent} className="btn-gradient px-10 py-7 rounded-2xl font-bold">
+              Initialize Your First Unit
+            </Button>
           </div>
         )}
         {/* Search Empty State */}
         {agents.length > 0 && filteredAgents.length === 0 && (
-          <div className="text-center py-20 bg-zinc-950/20 rounded-3xl border border-white/5">
+          <div className="text-center py-24 bg-zinc-950/20 rounded-3xl border border-white/5">
+             <Search className="w-12 h-12 mx-auto text-zinc-800 mb-4" />
              <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">No units match your current directive</p>
-             <Button variant="ghost" onClick={() => setSearch('')} className="mt-4 text-primary text-xs font-bold uppercase">Clear Filter</Button>
+             <Button variant="ghost" onClick={() => setSearch('')} className="mt-4 text-primary text-xs font-bold uppercase hover:bg-primary/5">Clear Global Filter</Button>
           </div>
         )}
       </div>
-      <footer className="mt-20 pt-12 border-t border-white/5 text-center space-y-2 opacity-60 hover:opacity-100 transition-opacity">
-        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Vox0-ki Platform v1.2.0 • Sovereign Build ID: f7e2a9b</p>
-        <p className="text-[9px] text-zinc-700 italic">Global neural capacity is subject to model constraints. High-priority routing enabled for this session.</p>
+      <footer className="mt-24 py-12 border-t border-white/5 text-center space-y-2 opacity-40 hover:opacity-100 transition-opacity">
+        <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em]">Vox0-ki Platform v1.2.5 • Sovereign Build ID: f7e2a9b</p>
+        <p className="text-[9px] text-zinc-700 italic">Global neural capacity is subject to regional model constraints. High-priority routing enabled for this architect.</p>
       </footer>
     </AppLayout>
   );

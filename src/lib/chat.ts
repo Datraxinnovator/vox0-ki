@@ -19,7 +19,7 @@ class ChatService {
   }
   private parseState(json: any): ChatState {
     const data = json.data || json;
-    // Explicit warning if credentials seem missing from the response context
+    // Safety fallback for sandbox mode detection
     if (data.systemPrompt?.includes('fallback protocol active')) {
       console.warn('Vox0-ki: Operating in Sandbox Mode. Configure CF_AI_API_KEY for real neural links.');
     }
@@ -71,6 +71,9 @@ class ChatService {
             const chunk = decoder.decode(value, { stream: true });
             if (chunk) onChunk(chunk);
           }
+        } catch (streamErr) {
+          console.error('[STREAM READER ERROR]', streamErr);
+          return { success: false, error: 'Neural stream interrupted during transmission.' };
         } finally {
           reader.releaseLock();
         }
@@ -150,8 +153,11 @@ class ChatService {
   }
   getSessionId(): string { return this.sessionId; }
   switchSession(sessionId: string): void {
-    this.sessionId = sessionId;
-    this.baseUrl = `/api/chat/${sessionId}`;
+    if (this.sessionId !== sessionId) {
+      console.info(`[VOX0-KI] Neural Link switching to session: ${sessionId}`);
+      this.sessionId = sessionId;
+      this.baseUrl = `/api/chat/${sessionId}`;
+    }
   }
 }
 export const chatService = new ChatService();

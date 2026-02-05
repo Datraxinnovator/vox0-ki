@@ -14,6 +14,7 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [currentStream, setCurrentStream] = useState('');
   const [processingPhase, setProcessingPhase] = useState<string>('Neural Processing');
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTyping]);
+  }, [messages, isTyping, currentStream]);
   const loadMessages = async () => {
     const res = await chatService.getMessages();
     setMessages(res.data?.messages || []);
@@ -41,16 +42,21 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
+    setCurrentStream('');
     setProcessingPhase('Synthesizing Response');
     try {
-      // Simulate phases for high-fidelity feel
-      if (agent.tools.length > 0) {
-        setTimeout(() => setProcessingPhase('Evaluating Capabilities'), 1000);
-        setTimeout(() => setProcessingPhase('Invoking Protocols'), 2000);
-      }
-      const res = await chatService.sendMessage(userMsg.content, agent.model);
+      // High-fidelity phase simulation
+      const phaseTimer = setTimeout(() => setProcessingPhase('Evaluating Capabilities'), 800);
+      const phaseTimer2 = setTimeout(() => setProcessingPhase('Invoking Protocols'), 1600);
+      const res = await chatService.sendMessage(userMsg.content, agent.model, (chunk) => {
+        setProcessingPhase('Streaming Neural Output');
+        setCurrentStream(prev => prev + chunk);
+      });
+      clearTimeout(phaseTimer);
+      clearTimeout(phaseTimer2);
       if (res.success) {
-        loadMessages();
+        await loadMessages();
+        setCurrentStream('');
       } else {
         const errorMsg: Message = {
           id: crypto.randomUUID(),
@@ -60,8 +66,11 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
         };
         setMessages(prev => [...prev, errorMsg]);
       }
+    } catch (err) {
+      console.error('Neural Link Error:', err);
     } finally {
       setIsTyping(false);
+      setCurrentStream('');
     }
   };
   return (
@@ -91,7 +100,7 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
               </div>
               <div className="flex flex-col gap-2 max-w-[80%]">
                 <div className={cn(
-                  "p-4 rounded-2xl text-sm leading-relaxed",
+                  "p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
                   m.role === 'user'
                     ? "bg-primary text-black font-bold rounded-tr-none"
                     : "bg-zinc-900/40 text-white rounded-tl-none border border-white/5 shadow-glass"
@@ -111,16 +120,20 @@ export function ChatPreview({ agent }: ChatPreviewProps) {
               </div>
             </div>
           ))}
-          {isTyping && (
-            <div className="flex gap-4 animate-pulse">
+          {(isTyping || currentStream) && (
+            <div className="flex gap-4 animate-fade-in">
               <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="bg-zinc-900/20 px-4 py-3 rounded-2xl rounded-tl-none border border-white/5 flex gap-1.5 items-center">
-                  <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
+              <div className="flex flex-col gap-2 max-w-[80%]">
+                <div className="bg-zinc-900/40 p-4 rounded-2xl rounded-tl-none border border-white/5 text-white text-sm leading-relaxed min-h-[44px] shadow-glass">
+                  {currentStream || (
+                    <div className="flex gap-1.5 items-center h-full">
+                      <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                      <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">
                    <Cpu className="h-3 w-3" />
