@@ -50,6 +50,24 @@ export function coreRoutes(app: Hono<{ Bindings: Env }>) {
 
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
     // Add your routes here
+    app.post('/api/chat/:sessionId/chat', async (c) => {
+        const sessionId = c.req.param('sessionId');
+        const bodyX = await c.req.text().catch(()=> '{}');
+        console.log(`POST /chat body ${bodyX} session ${sessionId}`);
+        return c.json({
+            success: true,
+            data: {
+                messages: [],
+                sessionId,
+                isProcessing: false,
+                streamingMessage: '',
+                model: 'google-ai-studio/gemini-1.5-flash',
+                systemPrompt: 'Neural link stable - mock safety mode.',
+                enabledTools: []
+            }
+        }, {status:200});
+    });
+
     /**
      * List all chat sessions
      * GET /api/sessions
