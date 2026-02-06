@@ -1,6 +1,6 @@
 # Cloudflare Agents Chat Template
 
-[![Deploy to Cloudflare][cloudflarebutton]]
+[![Deploy to Cloudflare][![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Datraxinnovator/vox0-ki)]
 
 A production-ready full-stack chat application built on Cloudflare Workers using the Agents SDK. Features multi-session conversations, streaming AI responses, tool calling (web search, weather, MCP integration), and a modern responsive UI powered by React, Tailwind CSS, and shadcn/ui.
 
@@ -114,7 +114,7 @@ Or manually:
 
 **Automatic Assets**: Static frontend bundles to Cloudflare Pages. SPA routing handled via `assets` in `wrangler.jsonc`.
 
-**[cloudflarebutton]**
+**[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Datraxinnovator/vox0-ki)**
 
 ### Production Checklist
 - ✅ Set all secrets (`wrangler secret put`)
